@@ -25,22 +25,52 @@ This implementation provides a basic MCP server that connects with Claude Deskto
    uv run mcp-server
    ```
 
-### Claude Desktop Integration
+### Global Installation (Recommended for IDE/Editor Integration)
 
-1. Copy the `mcp-config.json` file to your Claude Desktop configuration directory
-2. Restart Claude Desktop
-3. The `knowledge-engine` server should now be available with the `hello_world` tool
+For a more seamless integration with editors like Claude Desktop or Cursor/VSCode, it's recommended to install the `knowledge-engine` package globally within `uv`'s environment.
 
-### MCP Configuration
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/knowledge_engine.git
+    cd knowledge_engine
+    ```
 
+2.  **Install the package globally:**
+    This command makes the `mcp-server` command available system-wide for `uv`.
+    ```bash
+    uv pip install --system .
+    ```
+
+### Editor Integration
+
+Once the package is installed, you can configure your editor to use the `knowledge-engine` MCP server.
+
+**Claude Desktop**
+
+Add the following to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "knowledge-engine": {
       "command": "uv",
-      "args": ["run", "mcp-server"],
-      "env": {},
-      "cwd": "C:\\Users\\mddee\\knowledge_engine"
+      "args": [
+        "run",
+        "mcp-server"
+      ]
+    }
+  }
+}
+```
+
+**Cursor / VSCode**
+
+Add the following to your `settings.json`:
+```json
+{
+  "mcp.servers": {
+    "knowledge-engine": {
+        "command": "uv",
+        "args": ["run", "mcp-server"]
     }
   }
 }
