@@ -1,0 +1,30 @@
+[project]
+name = "knowledge-engine"
+version = "0.1.0"
+description = "Knowledge Engine for LLM-powered codebase understanding and navigation"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=2.8.1",
+]
+
+[project.scripts]
+mcp-server = "knowledge_engine.mcp_server:run_server"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "black>=23.0.0", 
+    "ruff>=0.1.0",
+]
+package = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
