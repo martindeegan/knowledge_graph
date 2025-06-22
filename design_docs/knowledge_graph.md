@@ -103,8 +103,8 @@ When `traverse` is called on a concept:
 Each MCP server instance uses a single SQLite database:
 
 ```
-~/.knowledge_engine/
-  ├── knowledge_<workspace_id>.db    # Single database per MCP server instance
+~/.knowledge/
+  ├── <workspace_id>.db    # Single database per MCP server instance
 ```
 
 The database can contain nodes from multiple workspaces, distinguished by URI namespace:
@@ -118,7 +118,7 @@ The database can contain nodes from multiple workspaces, distinguished by URI na
 
 * **One Database Per MCP Server**: Each MCP server instance maintains its own SQLite database
 * **Full URI Storage**: Store complete URIs as primary keys (e.g., `concept://ws/project`)
-* **Common Database Location**: Store databases in `~/.knowledge_engine/` for centralized management
+* **Common Database Location**: Store databases in `~/.knowledge/` for centralized management
 * **Cross-Workspace Support**: Single database can contain nodes from multiple workspaces via URI namespace
 
 ### Tables

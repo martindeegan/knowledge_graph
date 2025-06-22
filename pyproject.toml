@@ -6,10 +6,17 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastmcp>=2.8.1",
+    "pydantic",
+    "typer",
+    "rich",
+    "toml",
+    "fastapi",
+    "uvicorn[standard]",
 ]
 
 [project.scripts]
-mcp-server = "knowledge_engine.mcp_server:run_server"
+mcp-server = "knowledge_engine.mcp_server:app"
+ke-cli = "knowledge_engine.cli:app"
 
 [project.optional-dependencies]
 dev = [

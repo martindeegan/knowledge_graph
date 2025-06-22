@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Knowledge Graph</title>
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style type="text/css">
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      padding: 10px;
+      margin: 0;
+      flex-shrink: 0; /* Prevent h1 from shrinking */
+    }
+    #main-container {
+      display: flex;
+      flex-grow: 1;
+      height: 100%; /* Ensure it takes up remaining space */
+    }
+    #graph {
+      flex-grow: 1;
+      border: 1px solid lightgray;
+    }
+    #sidebar {
+      width: 30%;
+      flex-shrink: 0; /* Prevent sidebar from shrinking */
+      border-left: 1px solid lightgray;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Knowledge Graph</h1>
+  <div id="main-container">
+    <div id="graph"></div>
+    <div id="sidebar">
+        <h2>Node Details</h2>
+        <p>Click on a node to see its details here.</p>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    const container = document.getElementById('graph');
+    const sidebar = document.getElementById('sidebar');
+
+    // Create persistent datasets
+    const nodes = new vis.DataSet([]);
+    const edges = new vis.DataSet([]);
+
+    const options = {
+        groups: {
+            directory: { shape: 'dot', size: 12, color: { background: '#F57C00', border: '#F57C00' } }, // Muted Orange
+            resource: { shape: 'dot', color: { background: '#2196F3', border: '#2196F3' } },   // Blue
+            concept: { shape: 'dot', color: { background: '#E91E63', border: '#E91E63' } }      // Pink
+        },
+        nodes: {
+            shape: 'dot',
+            size: 16,
+            borderWidth: 2,
+            shadow: false,
+            font: {
+                size: 14,
+                face: 'arial',
+                color: '#333'
+            }
+        },
+        edges: {
+            arrows: 'to',
+            smooth: {
+                enabled: false
+            },
+            width: 1,
+            color: {
+                color: '#848484',
+                highlight: '#848484',
+                hover: '#848484'
+            }
+        },
+        physics: {
+            forceAtlas2Based: {
+                gravitationalConstant: -100,
+                centralGravity: 0.005,
+                springLength: 250,
+                springConstant: 0.08,
+                damping: 0.7,
+                avoidOverlap: 0.5
+            },
+            maxVelocity: 50,
+            minVelocity: 0.1,
+            solver: 'forceAtlas2Based',
+            timestep: 0.35,
+            stabilization: { iterations: 200 }
+        }
+    };
+
+    // Create the network instance
+    const network = new vis.Network(container, { nodes, edges }, options);
+
+    async function updateGraph() {
+        try {
+            const response = await fetch('/api/graph');
+            const data = await response.json();
+
+            const newNodes = data.nodes.map(n => ({ id: n.uri, label: n.name, group: n.node_type, content: n.content }));
+            const newEdges = data.relations.map(r => ({ id: r.id, from: r.source_uri, to: r.target_uri, label: r.relation_type }));
+            
+            nodes.update(newNodes);
+            edges.update(newEdges);
+        } catch (error) {
+            console.error('Error fetching or drawing graph:', error);
+            container.innerHTML = 'Error loading graph. Check the console for details.';
+        }
+    }
+
+    async function navigateTo(uri) {
+        try {
+            await fetch('/api/navigate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uri: uri }),
+            });
+            await updateGraph(); // Update graph with new context
+        } catch (error) {
+            console.error('Error during navigation:', error);
+        }
+    }
+
+    network.on("click", function (params) {
+        if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const node = nodes.get(nodeId);
+            
+            // Update sidebar
+            let content = `<h2>${node.label}</h2>`;
+            content += `<p><strong>URI:</strong> ${node.id}</p>`;
+            content += `<p><strong>Type:</strong> ${node.group}</p>`;
+            if (node.content) {
+                content += `<h3>Content</h3><pre>${node.content}</pre>`;
+            } else {
+                content += '<p>No content available.</p>';
+            }
+            sidebar.innerHTML = content;
+
+            // Navigate
+            navigateTo(nodeId);
+        } else {
+            // Clear sidebar if background is clicked
+            sidebar.innerHTML = '<h2>Node Details</h2><p>Click on a node to see its details here.</p>';
+        }
+    });
+
+    // Initial graph load
+    updateGraph();
+  </script>
+</body>
+</html> 

@@ -38,7 +38,7 @@ The server maintains a list of available workspaces that it can fetch from:
 ### Concept Management
 
 * `add_concept(path, contents, relations)`: Creates new concepts with automatic link resolution
-* `edit_concept(concept_uri, contents)`: Modifies existing concept contents
+* `update_concept(concept_uri, contents)`: Modifies existing concept contents
 * `move_concept(old_uri, new_path)`: Moves/renames concepts
 * `delete_concept(concept_uri)`: Removes concepts from the graph
 
