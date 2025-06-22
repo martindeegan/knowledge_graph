@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Engine - Live Graph</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e53e3e;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #38a169;
+        }
+
+        .graph-container {
+            flex: 1;
+            position: relative;
+            background: white;
+            margin: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        #knowledge-graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header h2 {
+            color: #4a5568;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .node-info {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .node-info h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .node-info p {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .node-info .label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .content-preview {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        .stats {
+            background: #edf2f7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stats h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .controls {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .controls h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .control-button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            transition: background 0.3s;
+        }
+
+        .control-button:hover {
+            background: #3182ce;
+        }
+
+        .control-button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #48bb78;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .error {
+            background: #e53e3e !important;
+        }
+
+        .config-section {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .config-section h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .config-section input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header">
+                <h1>Knowledge Engine - Live Graph</h1>
+                <div class="status-indicator">
+                    <span id="status-text">Connecting...</span>
+                    <div id="status-dot" class="status-dot"></div>
+                </div>
+            </div>
+            <div class="graph-container">
+                <div id="knowledge-graph"></div>
+                <div id="loading" class="loading">
+                    <div>Loading graph data...</div>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Graph Explorer</h2>
+                <div class="config-section">
+                    <h3>API Configuration</h3>
+                    <input type="text" id="api-url" placeholder="API URL (e.g., http://127.0.0.1:6969)" value="ws://127.0.0.1:6969">
+                    <button id="connect-btn" class="control-button">Connect</button>
+                </div>
+                <div id="graph-stats" class="stats">
+                    <h3>Statistics</h3>
+                    <div class="stat-item">
+                        <span>Active Nodes:</span>
+                        <span id="active-node-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Active Relations:</span>
+                        <span id="active-relation-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Total Nodes:</span>
+                        <span id="total-node-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Total Relations:</span>
+                        <span id="total-relation-count">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-content">
+                <div id="node-details">
+                    <div class="node-info">
+                        <h3>Node Details</h3>
+                        <p>Click on a node to explore its details and connections.</p>
+                    </div>
+                </div>
+                <div class="controls">
+                    <h3>Actions</h3>
+                    <button id="refresh-btn" class="control-button" disabled>Refresh Graph</button>
+                    <button id="reset-view-btn" class="control-button">Reset View</button>
+                    <button id="auto-layout-btn" class="control-button">Auto Layout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        class KnowledgeGraphApp {
+            constructor() {
+                this.websocket = null;
+                this.apiUrl = '';
+                this.network = null;
+                this.nodes = new vis.DataSet([]);
+                this.edges = new vis.DataSet([]);
+                this.selectedNode = null;
+                this.isConnected = false;
+                
+                this.initializeGraph();
+                this.setupEventListeners();
+                
+                // Try to connect automatically
+                const defaultUrl = document.getElementById('api-url').value;
+                this.connect(defaultUrl);
+            }
+
+            initializeGraph() {
+                const container = document.getElementById('knowledge-graph');
+                
+                const options = {
+                    groups: {
+                        directory: { 
+                            shape: 'dot', 
+                            size: 15, 
+                            color: { background: '#F57C00', border: '#E65100' },
+                            font: { color: '#333', size: 12 }
+                        },
+                        resource: { 
+                            shape: 'dot', 
+                            size: 12,
+                            color: { background: '#2196F3', border: '#1976D2' },
+                            font: { color: '#333', size: 12 }
+                        },
+                        concept: { 
+                            shape: 'dot', 
+                            size: 18,
+                            color: { background: '#E91E63', border: '#C2185B' },
+                            font: { color: '#333', size: 12 }
+                        }
+                    },
+                    nodes: {
+                        shape: 'dot',
+                        size: 16,
+                        borderWidth: 2,
+                        shadow: {
+                            enabled: true,
+                            color: 'rgba(0,0,0,0.2)',
+                            size: 5,
+                            x: 2,
+                            y: 2
+                        },
+                        font: {
+                            size: 14,
+                            face: 'Segoe UI',
+                            color: '#333'
+                        },
+                        chosen: {
+                            node: (values, id, selected, hovering) => {
+                                values.shadow = true;
+                                values.shadowColor = 'rgba(0,0,0,0.4)';
+                                values.shadowSize = 10;
+                            }
+                        }
+                    },
+                    edges: {
+                        arrows: 'to',
+                        smooth: {
+                            enabled: true,
+                            type: 'dynamic',
+                            roundness: 0.2
+                        },
+                        width: 2,
+                        color: {
+                            color: '#848484',
+                            highlight: '#2196F3',
+                            hover: '#2196F3'
+                        },
+                        font: {
+                            size: 11,
+                            color: '#666',
+                            strokeWidth: 3,
+                            strokeColor: 'white'
+                        }
+                    },
+                    physics: {
+                        enabled: true,
+                        forceAtlas2Based: {
+                            gravitationalConstant: -80,
+                            centralGravity: 0.01,
+                            springLength: 200,
+                            springConstant: 0.08,
+                            damping: 0.8,
+                            avoidOverlap: 0.5
+                        },
+                        maxVelocity: 30,
+                        minVelocity: 0.1,
+                        solver: 'forceAtlas2Based',
+                        timestep: 0.35,
+                        stabilization: { 
+                            iterations: 150,
+                            updateInterval: 25
+                        }
+                    },
+                    interaction: {
+                        hover: true,
+                        hoverConnectedEdges: true,
+                        selectConnectedEdges: false
+                    }
+                };
+
+                this.network = new vis.Network(container, {
+                    nodes: this.nodes,
+                    edges: this.edges
+                }, options);
+
+                // Set up network event listeners
+                this.network.on('click', (params) => {
+                    if (params.nodes.length > 0) {
+                        this.selectNode(params.nodes[0]);
+                    }
+                });
+
+                this.network.on('doubleClick', (params) => {
+                    if (params.nodes.length > 0) {
+                        this.navigateToNode(params.nodes[0]);
+                    }
+                });
+            }
+
+            setupEventListeners() {
+                document.getElementById('connect-btn').addEventListener('click', () => {
+                    const url = document.getElementById('api-url').value;
+                    this.connect(url);
+                });
+
+                document.getElementById('refresh-btn').addEventListener('click', () => {
+                    this.refreshGraph();
+                });
+
+                document.getElementById('reset-view-btn').addEventListener('click', () => {
+                    this.network.fit();
+                });
+
+                document.getElementById('auto-layout-btn').addEventListener('click', () => {
+                    this.network.stabilize();
+                });
+            }
+
+            connect(url) {
+                if (this.websocket) {
+                    this.websocket.close();
+                }
+
+                // Convert http to ws
+                this.apiUrl = url.replace('http://', '').replace('ws://', '');
+                const wsUrl = `ws://${this.apiUrl}/ws`;
+
+                this.websocket = new WebSocket(wsUrl);
+
+                this.websocket.onopen = () => {
+                    this.isConnected = true;
+                    this.updateConnectionStatus(true);
+                    this.showNotification('Connected to Knowledge Engine', 'success');
+                    document.getElementById('refresh-btn').disabled = false;
+                };
+
+                this.websocket.onclose = () => {
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                    this.showNotification('Disconnected from Knowledge Engine', 'error');
+                    document.getElementById('refresh-btn').disabled = true;
+                };
+
+                this.websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.showNotification('Connection error', 'error');
+                };
+
+                this.websocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+            }
+
+            handleWebSocketMessage(message) {
+                switch (message.type) {
+                    case 'initial_data':
+                    case 'graph_update':
+                        this.updateGraph(message.data);
+                        break;
+                    case 'navigation_complete':
+                        this.showNotification(message.data.message, 'success');
+                        break;
+                    case 'navigation_result':
+                        if (message.data.success) {
+                            this.showNotification(message.data.message, 'success');
+                        } else {
+                            this.showNotification(message.data.error, 'error');
+                        }
+                        break;
+                    case 'pong':
+                        // Keep-alive response
+                        break;
+                    default:
+                        console.log('Unknown message type:', message.type);
+                }
+            }
+
+            updateGraph(data) {
+                try {
+                    const newNodes = data.nodes.map(n => ({
+                        id: n.uri,
+                        label: n.name || n.uri.split('/').pop(),
+                        group: n.node_type,
+                        content: n.content,
+                        metadata: n.metadata,
+                        title: `${n.name || 'Node'}\nType: ${n.node_type}\nURI: ${n.uri}`
+                    }));
+
+                    const newEdges = data.relations.map(r => ({
+                        id: `${r.source_uri}-${r.target_uri}-${r.relation_type}`,
+                        from: r.source_uri,
+                        to: r.target_uri,
+                        label: r.relation_type,
+                        title: `${r.relation_type} (weight: ${r.weight})`,
+                        width: Math.max(1, r.weight * 3)
+                    }));
+
+                    this.nodes.clear();
+                    this.edges.clear();
+                    this.nodes.add(newNodes);
+                    this.edges.add(newEdges);
+
+                    // Update statistics
+                    if (data.stats) {
+                        document.getElementById('active-node-count').textContent = data.stats.active_nodes || newNodes.length;
+                        document.getElementById('active-relation-count').textContent = data.stats.active_relations || newEdges.length;
+                        document.getElementById('total-node-count').textContent = data.stats.total_nodes || 0;
+                        document.getElementById('total-relation-count').textContent = data.stats.total_relations || 0;
+                    }
+
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Error updating graph:', error);
+                    this.showNotification('Error updating graph', 'error');
+                    this.hideLoading();
+                }
+            }
+
+            selectNode(nodeId) {
+                this.selectedNode = nodeId;
+                const node = this.nodes.get(nodeId);
+                
+                if (node) {
+                    this.displayNodeDetails(node);
+                    this.network.selectNodes([nodeId]);
+                }
+            }
+
+            displayNodeDetails(node) {
+                const detailsContainer = document.getElementById('node-details');
+                
+                let content = `
+                    <div class="node-info">
+                        <h3>${node.label}</h3>
+                        <p><span class="label">URI:</span> ${node.id}</p>
+                        <p><span class="label">Type:</span> ${node.group}</p>
+                `;
+
+                if (node.content) {
+                    content += `
+                        <p><span class="label">Content:</span></p>
+                        <div class="content-preview">${node.content}</div>
+                    `;
+                }
+
+                if (node.metadata && Object.keys(node.metadata).length > 0) {
+                    content += `
+                        <p><span class="label">Metadata:</span></p>
+                        <div class="content-preview">${JSON.stringify(node.metadata, null, 2)}</div>
+                    `;
+                }
+
+                content += `
+                        <p style="margin-top: 15px;">
+                            <button class="control-button" onclick="app.navigateToNode('${node.id}')">
+                                Traverse from this node
+                            </button>
+                        </p>
+                    </div>
+                `;
+
+                detailsContainer.innerHTML = content;
+            }
+
+            navigateToNode(nodeId) {
+                if (!this.isConnected) {
+                    this.showNotification('Not connected to server', 'error');
+                    return;
+                }
+
+                this.showLoading();
+                
+                const message = {
+                    type: 'navigate',
+                    uri: nodeId,
+                    max_cost: 1.0
+                };
+                
+                this.websocket.send(JSON.stringify(message));
+                this.showNotification(`Navigating to: ${nodeId}`, 'info');
+            }
+
+            refreshGraph() {
+                if (!this.isConnected) {
+                    this.showNotification('Not connected to server', 'error');
+                    return;
+                }
+
+                this.showLoading();
+                
+                // Send a ping to trigger a graph update
+                const message = { type: 'ping' };
+                this.websocket.send(JSON.stringify(message));
+            }
+
+            updateConnectionStatus(connected) {
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                
+                if (connected) {
+                    statusDot.classList.add('connected');
+                    statusText.textContent = 'Connected';
+                } else {
+                    statusDot.classList.remove('connected');
+                    statusText.textContent = 'Disconnected';
+                }
+            }
+
+            showLoading() {
+                document.getElementById('loading').classList.add('show');
+            }
+
+            hideLoading() {
+                document.getElementById('loading').classList.remove('show');
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification show ${type}`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Initialize the app when the page loads
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new KnowledgeGraphApp();
+        });
+    </script>
+</body>
+</html>

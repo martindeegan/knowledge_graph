@@ -104,7 +104,7 @@
 
     async function updateGraph() {
         try {
-            const response = await fetch('/api/graph');
+            const response = await fetch('/viz/api/graph');
             const data = await response.json();
 
             const newNodes = data.nodes.map(n => ({ id: n.uri, label: n.name, group: n.node_type, content: n.content }));
@@ -120,7 +120,7 @@
 
     async function navigateTo(uri) {
         try {
-            await fetch('/api/navigate', {
+            await fetch('/viz/api/navigate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uri: uri }),

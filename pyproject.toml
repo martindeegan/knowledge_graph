@@ -12,11 +12,17 @@ dependencies = [
     "toml",
     "fastapi",
     "uvicorn[standard]",
+    "pyyaml",
+    "GitPython",
+    "aiohttp>=3.12.13",
+    "python-socketio>=5.8.0",
+    "psutil",
 ]
 
 [project.scripts]
-mcp-server = "knowledge_engine.mcp_server:app"
+ke-server = "knowledge_engine.start_server:main"
 ke-cli = "knowledge_engine.cli:app"
+ke-visualizer = "knowledge_engine.visualization.serve_frontend:main"
 
 [project.optional-dependencies]
 dev = [
@@ -35,3 +41,6 @@ package = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"knowledge_engine.server" = ["static/**"]
