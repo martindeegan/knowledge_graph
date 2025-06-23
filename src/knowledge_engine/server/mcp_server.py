@@ -615,46 +615,45 @@ def create_mcp_server(workspace_root=None, workspace_id=None, db_path=None) -> F
             return f"Error: {e}"
 
     # Resource definitions
-    @mcp.resource("concept://**")
-    def get_concept_resource(uri: str) -> str:
+    @mcp.resource("concept://{path*}")
+    def get_concept_resource(path: str) -> str:
         """
         Get the LLM-digestible representation of a concept resource.
         
         Args:
-            uri (str): The full URI of the concept, e.g., "concept://project/goals".
+            path (str): The path part of the concept URI, e.g., "project/goals".
             
         Returns:
             str: A formatted string containing the concept's name and content,
                  or an error message if not found.
         """
+        uri = f"concept://{path}"
         logging.info(f"Received request for concept resource: {uri}")
         kg = create_kg()
         node = kg.get_node(uri)
         if node and node.node_type == "concept":
-            return f"# Concept: {node.name}\n\n{node.content}"
+            return f"# Concept: {node.name}\\n\\n{node.content}"
         return f"Error: Concept not found at {uri}"
 
-    @mcp.resource("file://**")
-    def get_file_resource(uri: str) -> str:
+    @mcp.resource("file://{path*}")
+    def get_file_resource(path: str) -> str:
         """
         Get the contents of a file resource.
         
         Args:
-            uri (str): The full URI of the file, e.g., "file://src/main.py".
+            path (str): The file path relative to the workspace root, e.g., "src/main.py".
             
         Returns:
             str: The content of the file, or an error message if not found.
         """
+        uri = f"file://{path}"
         logging.info(f"Received request for file resource: {uri}")
-        if not uri.startswith("file://"):
-            return "Error: Invalid file URI format."
             
         # This assumes workspace_root is available from the parent scope
         if workspace_root is None:
             return "Error: Workspace root not configured on the server."
             
-        relative_path = uri[len("file://"):]
-        file_path = Path(workspace_root) / relative_path
+        file_path = Path(workspace_root) / path
         
         if file_path.is_file():
             try:

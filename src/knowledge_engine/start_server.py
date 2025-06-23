@@ -15,7 +15,7 @@ from rich.panel import Panel
 import typer
 import uvicorn
 from fastmcp import FastMCP
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from knowledge_engine.core.active_context import ActiveContext
 from knowledge_engine.core.knowledge_graph import KnowledgeGraph
@@ -176,6 +176,21 @@ def create_combined_server(workspace, port):
     mcp = create_mcp_server(workspace.root, workspace.id, workspace.db_path)
     # Create the ASGI app (Streamable HTTP transport is default)
     mcp_app = mcp.http_app(path='/mcp')
+
+    # Add middleware to inject a default session ID if none is provided
+    # This is a workaround for clients that don't support sessions.
+    @mcp_app.middleware("http")
+    async def add_session_header(request: Request, call_next):
+        # Check if a session header is already present
+        if 'x-session-id' not in request.headers:
+            # If not, create a mutable copy of headers and add a default
+            mutable_headers = request.headers.mutablecopy()
+            mutable_headers['x-session-id'] = 'default-session-id'
+            # Plug the new headers into the request scope
+            request.scope['headers'] = mutable_headers.raw
+        
+        response = await call_next(request)
+        return response
     
     # Create the app with visualization endpoints
     app = create_app(mcp_app, workspace)

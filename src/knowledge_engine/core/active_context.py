@@ -70,7 +70,7 @@ class ActiveContext:
                     
             except (json.JSONDecodeError, KeyError):
                 # If there's an error loading, start fresh
-        pass
+                pass
 
     def _save(self):
         self._context_path.parent.mkdir(parents=True, exist_ok=True)
